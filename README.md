@@ -60,6 +60,16 @@ EMP-{YEAR}-{SEQUENCE}   →   EMP-2025-0001
 
 ## API Reference
 
+Interactive Swagger docs are served by the backend:
+
+```http
+GET /api-docs
+GET /api-docs/openapi.json
+```
+
+Run the backend and open `http://localhost:5000/api-docs` to browse the full
+OpenAPI documentation and test endpoints with a JWT bearer token.
+
 | Method | Endpoint                                         | Role        |
 |--------|--------------------------------------------------|-------------|
 | POST   | /api/v1/auth/login                               | Public      |
