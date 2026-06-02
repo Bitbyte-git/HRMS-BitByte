@@ -790,7 +790,7 @@ const mapAttendanceRecords = ({ logs, employeeById }) => {
       return;
     }
 
-    // Duplicate found — compare Shift 1 Check-In times
+    // Duplicate found - compare Shift 1 Check-In times.
     const existing = bestByKey.get(dedupKey);
     const existingCheckIn = parseTimeToMinutes(existing.log.shift1CheckIn);
     const currentCheckIn = parseTimeToMinutes(log.shift1CheckIn);
@@ -800,7 +800,7 @@ const mapAttendanceRecords = ({ logs, employeeById }) => {
       currentCheckIn !== null &&
       (existingCheckIn === null || currentCheckIn < existingCheckIn)
     ) {
-      // Current record has an earlier (or only valid) check-in — promote it
+      // Current record has an earlier or only valid check-in, so promote it.
       bestByKey.set(dedupKey, { log, employee });
       action = "REPLACED";
     } else {
@@ -825,15 +825,17 @@ const mapAttendanceRecords = ({ logs, employeeById }) => {
     });
   });
 
-  // Emit audit warnings for all duplicate resolutions
+  // Emit audit warnings for all duplicate resolutions.
   if (duplicateAudit.length > 0) {
     logger.warn(
-      `[Attendance Dedup] Resolved ${duplicateAudit.length} duplicate(s)`,
+      `[Attendance Dedup] Resolved ${duplicateAudit.length} duplicate(s): ${JSON.stringify(
+        duplicateAudit,
+      )}`,
       { duplicates: duplicateAudit },
     );
   }
 
-  // Build the final records list from the best entries
+  // Build the final records list from the best entries.
   const records = [];
   for (const { log, employee } of bestByKey.values()) {
     const record = mapAttendanceLogToRecord(log, employee);
