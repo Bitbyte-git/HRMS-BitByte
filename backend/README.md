@@ -1,5 +1,4 @@
 # bitbyte-backend
-# HRMS-backend
 
 ## Swagger API Documentation
 
@@ -98,4 +97,5 @@ PUT /api/v1/leaves/approve
 PUT /api/v1/leaves/reject
 POST /api/v1/leaves/comp-off
 ```
+
 # HRMS-backend
