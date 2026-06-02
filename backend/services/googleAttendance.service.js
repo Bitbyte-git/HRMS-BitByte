@@ -772,9 +772,9 @@ const mapAttendanceLogToRecord = (log, employee) => {
 };
 
 const mapAttendanceRecords = ({ logs, employeeById }) => {
-  const seen = new Set();
-  const records = [];
+  const bestByKey = new Map();
   const errors = [];
+  const duplicateAudit = [];
 
   logs.forEach((log) => {
     const employee = getEmployeeMapKeys(log.employeeId)
@@ -785,13 +785,61 @@ const mapAttendanceRecords = ({ logs, employeeById }) => {
       getComparableEmployeeId(log.employeeId) || `row-${log.rowNumber}`;
     const dedupKey = `${employeeKey}|${dateKey}`;
 
-    if (seen.has(dedupKey)) return;
-    seen.add(dedupKey);
+    if (!bestByKey.has(dedupKey)) {
+      bestByKey.set(dedupKey, { log, employee });
+      return;
+    }
 
+    // Duplicate found — compare Shift 1 Check-In times
+    const existing = bestByKey.get(dedupKey);
+    const existingCheckIn = parseTimeToMinutes(existing.log.shift1CheckIn);
+    const currentCheckIn = parseTimeToMinutes(log.shift1CheckIn);
+
+    let action;
+    if (
+      currentCheckIn !== null &&
+      (existingCheckIn === null || currentCheckIn < existingCheckIn)
+    ) {
+      // Current record has an earlier (or only valid) check-in — promote it
+      bestByKey.set(dedupKey, { log, employee });
+      action = "REPLACED";
+    } else {
+      action = "DISCARDED";
+    }
+
+    duplicateAudit.push({
+      employeeId: log.employeeId,
+      date: dateKey,
+      keptRow: action === "REPLACED" ? log.rowNumber : existing.log.rowNumber,
+      discardedRow:
+        action === "REPLACED" ? existing.log.rowNumber : log.rowNumber,
+      keptCheckIn:
+        action === "REPLACED"
+          ? log.shift1CheckIn
+          : existing.log.shift1CheckIn,
+      discardedCheckIn:
+        action === "REPLACED"
+          ? existing.log.shift1CheckIn
+          : log.shift1CheckIn,
+      action,
+    });
+  });
+
+  // Emit audit warnings for all duplicate resolutions
+  if (duplicateAudit.length > 0) {
+    logger.warn(
+      `[Attendance Dedup] Resolved ${duplicateAudit.length} duplicate(s)`,
+      { duplicates: duplicateAudit },
+    );
+  }
+
+  // Build the final records list from the best entries
+  const records = [];
+  for (const { log, employee } of bestByKey.values()) {
     const record = mapAttendanceLogToRecord(log, employee);
     if (record.mappingError) errors.push(record.mappingError);
     records.push(record);
-  });
+  }
 
   return { records, errors };
 };
