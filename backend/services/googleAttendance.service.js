@@ -236,11 +236,44 @@ const getEmployeeMasterRecordLimit = () =>
     DEFAULT_MASTER_MAX_RECORDS,
   );
 
+const maskValue = (value, visible = 6) => {
+  const text = normalizeCell(value);
+  if (!text) return null;
+  if (text.length <= visible * 2) return `${text.slice(0, 2)}...`;
+  return `${text.slice(0, visible)}...${text.slice(-visible)}`;
+};
+
+const getGoogleAttendanceEnvStatus = () => ({
+  GOOGLE_ATTENDANCE_SPREADSHEET_ID: Boolean(
+    process.env.GOOGLE_ATTENDANCE_SPREADSHEET_ID,
+  ),
+  GOOGLE_SHEET_ID: Boolean(process.env.GOOGLE_SHEET_ID),
+  GOOGLE_SHEETS_API_KEY: Boolean(process.env.GOOGLE_SHEETS_API_KEY),
+  GOOGLE_SHEETS_CREDENTIALS_JSON: Boolean(
+    process.env.GOOGLE_SHEETS_CREDENTIALS_JSON,
+  ),
+  GOOGLE_SERVICE_ACCOUNT_JSON: Boolean(
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+  ),
+  GOOGLE_CLIENT_EMAIL: Boolean(process.env.GOOGLE_CLIENT_EMAIL),
+  GOOGLE_PRIVATE_KEY: Boolean(process.env.GOOGLE_PRIVATE_KEY),
+  GOOGLE_PROJECT_ID: Boolean(process.env.GOOGLE_PROJECT_ID),
+  GOOGLE_SHEETS_CREDENTIALS_PATH: Boolean(
+    process.env.GOOGLE_SHEETS_CREDENTIALS_PATH,
+  ),
+  GOOGLE_APPLICATION_CREDENTIALS: Boolean(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  ),
+});
+
 const getSpreadsheetId = () => {
   const spreadsheetId =
     process.env.GOOGLE_ATTENDANCE_SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID;
 
   if (!spreadsheetId) {
+    logger.error("[GoogleAttendance] Missing spreadsheet id configuration", {
+      env: getGoogleAttendanceEnvStatus(),
+    });
     throw new AppError("Google attendance spreadsheet is not configured.", 503);
   }
 
@@ -258,6 +291,11 @@ const getCredentialsPath = () => {
     : path.resolve(__dirname, "..", configuredPath);
 
   if (!fs.existsSync(resolvedPath)) {
+    logger.error("[GoogleAttendance] Credentials file was not found", {
+      configuredPath,
+      resolvedPath,
+      env: getGoogleAttendanceEnvStatus(),
+    });
     throw new AppError(
       "Google Sheets credentials.json file was not found.",
       503,
@@ -267,22 +305,92 @@ const getCredentialsPath = () => {
   return resolvedPath;
 };
 
+const normalizePrivateKey = (value) =>
+  normalizeCell(value)
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/\\n/g, "\n");
+
 const getCredentials = () => {
   const inlineCredentials =
     process.env.GOOGLE_SHEETS_CREDENTIALS_JSON ||
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
-  if (!inlineCredentials) return null;
-
-  try {
-    return JSON.parse(inlineCredentials);
-  } catch (error) {
-    throw new AppError("Google Sheets service account JSON is invalid.", 503);
+  if (inlineCredentials) {
+    try {
+      const credentials = JSON.parse(inlineCredentials);
+      logger.info("[GoogleAttendance] Using inline service account JSON", {
+        clientEmail: maskValue(credentials.client_email),
+        projectId: credentials.project_id,
+      });
+      return credentials;
+    } catch (error) {
+      logger.error("[GoogleAttendance] Invalid service account JSON", {
+        error: error.message,
+        env: getGoogleAttendanceEnvStatus(),
+      });
+      throw new AppError("Google Sheets service account JSON is invalid.", 503);
+    }
   }
+
+  const clientEmail = normalizeCell(process.env.GOOGLE_CLIENT_EMAIL);
+  const privateKey = normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY);
+  const projectId = normalizeCell(process.env.GOOGLE_PROJECT_ID);
+
+  if (clientEmail || privateKey || projectId) {
+    const missing = [
+      ["GOOGLE_CLIENT_EMAIL", clientEmail],
+      ["GOOGLE_PRIVATE_KEY", privateKey],
+      ["GOOGLE_PROJECT_ID", projectId],
+    ]
+      .filter(([, value]) => !value)
+      .map(([key]) => key);
+
+    if (missing.length > 0) {
+      logger.error("[GoogleAttendance] Incomplete service account env vars", {
+        missing,
+        env: getGoogleAttendanceEnvStatus(),
+      });
+      throw new AppError(
+        `Google Sheets service account configuration is incomplete. Missing: ${missing.join(
+          ", ",
+        )}.`,
+        503,
+      );
+    }
+
+    if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+      logger.error("[GoogleAttendance] GOOGLE_PRIVATE_KEY format is invalid", {
+        hasBeginMarker: privateKey.includes("BEGIN PRIVATE KEY"),
+        hasEndMarker: privateKey.includes("END PRIVATE KEY"),
+        containsEscapedNewlines: String(
+          process.env.GOOGLE_PRIVATE_KEY,
+        ).includes("\\n"),
+        containsRealNewlines: privateKey.includes("\n"),
+      });
+      throw new AppError("Google Sheets private key format is invalid.", 503);
+    }
+
+    logger.info("[GoogleAttendance] Using service account env vars", {
+      clientEmail: maskValue(clientEmail),
+      projectId,
+    });
+
+    return {
+      type: "service_account",
+      client_email: clientEmail,
+      private_key: privateKey,
+      project_id: projectId,
+    };
+  }
+
+  return null;
 };
 
 const createSheetsClient = () => {
   if (process.env.GOOGLE_SHEETS_API_KEY) {
+    logger.info("[GoogleAttendance] Using Google Sheets API key auth", {
+      apiKey: maskValue(process.env.GOOGLE_SHEETS_API_KEY),
+    });
     return google.sheets({
       version: "v4",
       auth: process.env.GOOGLE_SHEETS_API_KEY,
@@ -290,6 +398,11 @@ const createSheetsClient = () => {
   }
 
   const credentials = getCredentials();
+  if (!credentials) {
+    logger.info("[GoogleAttendance] Using Google credentials file auth", {
+      env: getGoogleAttendanceEnvStatus(),
+    });
+  }
   const auth = new google.auth.GoogleAuth({
     ...(credentials ? { credentials } : { keyFile: getCredentialsPath() }),
     scopes: [SHEETS_READONLY_SCOPE],
@@ -846,6 +959,18 @@ const mapAttendanceRecords = ({ logs, employeeById }) => {
   return { records, errors };
 };
 
+const getGoogleApiErrorDetails = (error) => ({
+  name: error.name,
+  message: error.message,
+  code: error.code,
+  status: error.status,
+  responseStatus: error.response?.status,
+  responseStatusText: error.response?.statusText,
+  googleErrorMessage: error.response?.data?.error?.message,
+  googleErrorStatus: error.response?.data?.error?.status,
+  googleErrorReason: error.response?.data?.error?.errors?.[0]?.reason,
+});
+
 class GoogleAttendanceService {
   async getAttendance({
     date,
@@ -855,40 +980,76 @@ class GoogleAttendanceService {
     forceRefresh = false,
     limit,
   } = {}) {
-    const spreadsheetId = getSpreadsheetId();
-    const attendanceLimit = getAttendanceRecordLimit(limit);
-    const employeeLimit = getEmployeeMasterRecordLimit();
-    const employeeRange = buildEmployeeMasterRange(
-      employeeSheetName,
-      employeeLimit,
-    );
-    const attendanceRange = buildAttendanceLogRange(
-      attendanceSheetName || sheetName,
-      attendanceLimit,
-    );
-    const normalizedDate = normalizeDate(date);
-    const cacheKey = JSON.stringify({
-      spreadsheetId,
-      employeeRange,
-      attendanceRange,
-      date: normalizedDate,
-      attendanceLimit,
-      employeeLimit,
-    });
-
-    if (!forceRefresh) {
-      const cached = getCachedResult(cacheKey);
-      if (cached) return cached;
-    }
+    let requestContext = {};
 
     try {
+      const spreadsheetId = getSpreadsheetId();
+      const attendanceLimit = getAttendanceRecordLimit(limit);
+      const employeeLimit = getEmployeeMasterRecordLimit();
+      const employeeRange = buildEmployeeMasterRange(
+        employeeSheetName,
+        employeeLimit,
+      );
+      const attendanceRange = buildAttendanceLogRange(
+        attendanceSheetName || sheetName,
+        attendanceLimit,
+      );
+      const normalizedDate = normalizeDate(date);
+      const cacheKey = JSON.stringify({
+        spreadsheetId,
+        employeeRange,
+        attendanceRange,
+        date: normalizedDate,
+        attendanceLimit,
+        employeeLimit,
+      });
+
+      requestContext = {
+        spreadsheetId: maskValue(spreadsheetId),
+        employeeRange,
+        attendanceRange,
+        requestedDate: date || null,
+        normalizedDate: normalizedDate || null,
+        attendanceLimit,
+        employeeLimit,
+        forceRefresh,
+      };
+
+      logger.info("[GoogleAttendance] Fetch requested", {
+        ...requestContext,
+        env: getGoogleAttendanceEnvStatus(),
+      });
+
+      if (!forceRefresh) {
+        const cached = getCachedResult(cacheKey);
+        if (cached) {
+          logger.info("[GoogleAttendance] Returning cached attendance result", {
+            ...requestContext,
+            recordCount: cached.records?.length || 0,
+          });
+          return cached;
+        }
+      }
+
       const sheets = createSheetsClient();
+      logger.info("[GoogleAttendance] Requesting Google Sheets values", {
+        ...requestContext,
+      });
+
       const response = await sheets.spreadsheets.values.batchGet({
         spreadsheetId,
         ranges: [employeeRange, attendanceRange],
       });
 
       const valueRanges = response.data.valueRanges || [];
+      logger.info("[GoogleAttendance] Google Sheets values received", {
+        ...requestContext,
+        returnedRanges: valueRanges.map((range) => ({
+          range: range.range,
+          rowCount: range.values?.length || 0,
+        })),
+      });
+
       const employeeValues = getValuesByRange(valueRanges, employeeRange, 0);
       const attendanceValues = getValuesByRange(
         valueRanges,
@@ -900,6 +1061,15 @@ class GoogleAttendanceService {
         attendanceValues,
         requestedDate: normalizedDate,
         recordLimit: attendanceLimit,
+      });
+
+      logger.info("[GoogleAttendance] Attendance transformation completed", {
+        ...requestContext,
+        recordCount: transformed.records.length,
+        missingEmployeeCount: transformed.errors.length,
+        employeeScannedRows: transformed.employeeScannedRows,
+        attendanceScannedRows: transformed.attendanceScannedRows,
+        truncated: transformed.truncated,
       });
 
       const result = {
@@ -971,7 +1141,21 @@ class GoogleAttendanceService {
       setCachedResult(cacheKey, result);
       return result;
     } catch (error) {
-      if (error instanceof AppError) throw error;
+      if (error instanceof AppError) {
+        logger.error("[GoogleAttendance] Attendance fetch failed", {
+          ...requestContext,
+          statusCode: error.statusCode,
+          message: error.message,
+          errors: error.errors,
+        });
+        throw error;
+      }
+
+      logger.error("[GoogleAttendance] Google Sheets API request failed", {
+        ...requestContext,
+        error: getGoogleApiErrorDetails(error),
+      });
+
       throw new AppError(
         "Unable to fetch Google Sheets attendance data.",
         502,

@@ -43,6 +43,14 @@ const sendErrorDev = (err, res) => {
 
 const sendErrorProd = (err, res) => {
   if (err.isOperational) {
+    if (err.statusCode >= 500) {
+      logger.error('OPERATIONAL SERVER ERROR:', {
+        statusCode: err.statusCode,
+        message: err.message,
+        errors: err.errors || undefined,
+      });
+    }
+
     res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
