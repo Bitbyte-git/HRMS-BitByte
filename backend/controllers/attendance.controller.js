@@ -1,6 +1,7 @@
 const attendanceService = require('../services/attendance.service');
 const googleAttendanceService = require('../services/googleAttendance.service');
 const catchAsync = require('../utils/catchAsync');
+const logger = require('../utils/logger');
 
 exports.checkIn = catchAsync(async (req, res) => {
   const attendance = await attendanceService.checkIn(req.body.employeeId, req.user._id);
@@ -35,6 +36,17 @@ exports.getTodayAttendance = catchAsync(async (req, res) => {
 });
 
 exports.getGoogleSheetAttendance = catchAsync(async (req, res) => {
+  logger.info('[AttendanceController] Google Sheet attendance request', {
+    date: req.query.date || null,
+    limit: req.query.limit || null,
+    sheet: req.query.sheet || null,
+    employeeSheet: req.query.employeeSheet || null,
+    attendanceSheet: req.query.attendanceSheet || null,
+    refresh: req.query.refresh === 'true',
+    userRole: req.user?.role,
+    userId: req.user?._id,
+  });
+
   const result = await googleAttendanceService.getAttendance({
     date: req.query.date,
     sheetName: req.query.sheet,

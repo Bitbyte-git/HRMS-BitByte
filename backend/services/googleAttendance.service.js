@@ -387,6 +387,16 @@ const getCredentials = () => {
 };
 
 const createSheetsClient = () => {
+  const credentials = getCredentials();
+  if (credentials) {
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: [SHEETS_READONLY_SCOPE],
+    });
+
+    return google.sheets({ version: "v4", auth });
+  }
+
   if (process.env.GOOGLE_SHEETS_API_KEY) {
     logger.info("[GoogleAttendance] Using Google Sheets API key auth", {
       apiKey: maskValue(process.env.GOOGLE_SHEETS_API_KEY),
@@ -397,14 +407,11 @@ const createSheetsClient = () => {
     });
   }
 
-  const credentials = getCredentials();
-  if (!credentials) {
-    logger.info("[GoogleAttendance] Using Google credentials file auth", {
-      env: getGoogleAttendanceEnvStatus(),
-    });
-  }
+  logger.info("[GoogleAttendance] Using Google credentials file auth", {
+    env: getGoogleAttendanceEnvStatus(),
+  });
   const auth = new google.auth.GoogleAuth({
-    ...(credentials ? { credentials } : { keyFile: getCredentialsPath() }),
+    keyFile: getCredentialsPath(),
     scopes: [SHEETS_READONLY_SCOPE],
   });
 
