@@ -310,6 +310,59 @@ const normalizePrivateKey = (value) =>
     .replace(/^['"]|['"]$/g, "")
     .replace(/\\n/g, "\n");
 
+const parseServiceAccountJson = (value) => {
+  let text = normalizeCell(value);
+
+  // If wrapped in single or double quotes, strip them
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    text = text.slice(1, -1);
+  }
+
+  const sanitizeJsonWithLiteralNewlines = (str) => {
+    return str.replace(/"(?:[^"\\]|\\.)*"/g, (match) => {
+      return match.replace(/\r?\n/g, '\\n');
+    });
+  };
+
+  const candidates = [
+    ["raw", text],
+    ["unescaped_quotes", text.replace(/\\"/g, '"')],
+    [
+      "unescaped_quotes_and_line_continuations",
+      text.replace(/\\"/g, '"').replace(/\\\r?\n/g, "\\n"),
+    ],
+    [
+      "literal_newlines_sanitized",
+      sanitizeJsonWithLiteralNewlines(text),
+    ],
+    [
+      "literal_newlines_and_unescaped_quotes",
+      sanitizeJsonWithLiteralNewlines(text.replace(/\\"/g, '"')),
+    ],
+  ];
+  const errors = [];
+
+  for (const [strategy, candidate] of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (typeof parsed === "string") {
+        return {
+          credentials: JSON.parse(parsed),
+          strategy: `${strategy}_nested_json`,
+        };
+      }
+
+      return { credentials: parsed, strategy };
+    } catch (error) {
+      errors.push({ strategy, message: error.message });
+    }
+  }
+
+  const error = new Error(errors.map((item) => `${item.strategy}: ${item.message}`).join(" | "));
+  error.parseAttempts = errors;
+  throw error;
+};
+
 const getCredentials = () => {
   const inlineCredentials =
     process.env.GOOGLE_SHEETS_CREDENTIALS_JSON ||
@@ -317,15 +370,23 @@ const getCredentials = () => {
 
   if (inlineCredentials) {
     try {
-      const credentials = JSON.parse(inlineCredentials);
+      const { credentials, strategy } =
+        parseServiceAccountJson(inlineCredentials);
+
+      if (credentials && credentials.private_key) {
+        credentials.private_key = normalizePrivateKey(credentials.private_key);
+      }
+
       logger.info("[GoogleAttendance] Using inline service account JSON", {
         clientEmail: maskValue(credentials.client_email),
         projectId: credentials.project_id,
+        parseStrategy: strategy,
       });
       return credentials;
     } catch (error) {
       logger.error("[GoogleAttendance] Invalid service account JSON", {
         error: error.message,
+        parseAttempts: error.parseAttempts,
         env: getGoogleAttendanceEnvStatus(),
       });
       throw new AppError("Google Sheets service account JSON is invalid.", 503);
