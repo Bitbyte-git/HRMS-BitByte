@@ -1,6 +1,11 @@
 const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const multerStorageModule = require("multer-storage-cloudinary");
+// This line automatically picks the correct structure based on whatever npm installed
+const CloudinaryStorage =
+  multerStorageModule.CloudinaryStorage || multerStorageModule;
+
 const multer = require("multer");
+
 const AppError = require("../utils/AppError");
 
 const CLOUD_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
