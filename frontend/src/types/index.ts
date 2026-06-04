@@ -149,6 +149,7 @@ export interface DocumentRecord {
 export type AssetStatus = 'Available' | 'Assigned' | 'Returned' | 'Damaged' | 'Lost';
 export type AssetAssignmentStatus = 'Assigned' | 'Returned' | 'Lost' | 'Damaged';
 export type AssetAgreementStatus = 'Pending Signature' | 'Signed Uploaded' | 'Verified' | 'Rejected';
+export type AssetAgreementApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface AssetRecord {
   _id: string;
@@ -195,6 +196,18 @@ export interface AssetAgreementRecord {
   agreementPdfUrl?: string;
   signedPdfUrl?: string;
   signedFile?: DocumentFile;
+  adminApproval?: {
+    status: AssetAgreementApprovalStatus;
+    approvedBy?: string | User;
+    approvedAt?: string;
+    comments?: string;
+  };
+  superAdminApproval?: {
+    status: AssetAgreementApprovalStatus;
+    approvedBy?: string | User;
+    approvedAt?: string;
+    comments?: string;
+  };
   status: AssetAgreementStatus;
   agreementPayload?: AssetAgreementPayload;
   generatedDate: string;

@@ -50,6 +50,12 @@ const statusVariant = (status?: string) => {
   return 'pending';
 };
 
+const approvalText = (status?: string) => {
+  if (status === 'approved') return 'Approved';
+  if (status === 'rejected') return 'Rejected';
+  return 'Pending';
+};
+
 const AgreementModal: React.FC<{
   agreementId: string | null;
   onClose: () => void;
@@ -211,6 +217,7 @@ export const AssetManagement: React.FC = () => {
       toast.success('Agreement status updated.');
       setRejectAgreement(null);
       setRejectComments('');
+      queryClient.invalidateQueries({ queryKey: ['assetAgreement'] });
       invalidate();
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || 'Agreement verification failed'),
@@ -467,7 +474,21 @@ export const AssetManagement: React.FC = () => {
             { key: 'productName', header: 'Asset', render: (_, row) => <div><p>{row.productName}</p><p className="text-xs text-slate-400">{row.assetCode} · {row.serialNumber || row.imeiNumber || '-'}</p></div> },
             { key: 'assignedDate', header: 'Assigned', render: (value) => format(new Date(value as string), 'dd MMM yyyy') },
             { key: 'status', header: 'Assignment Status', render: (value) => <Badge variant={statusVariant(String(value)) as any}>{String(value)}</Badge> },
-            { key: 'agreement', header: 'Agreement', render: (_, row) => row.agreement ? <Badge variant={statusVariant(row.agreement.status) as any}>{row.agreement.status}</Badge> : <Badge>No Agreement</Badge> },
+            {
+              key: 'agreement',
+              header: 'Agreement',
+              render: (_, row) => row.agreement ? (
+                <div className="space-y-1.5">
+                  <Badge variant={statusVariant(row.agreement.status) as any}>{row.agreement.status}</Badge>
+                  {row.agreement.signedPdfUrl && (
+                    <div className="text-[11px] leading-4 text-slate-400 dark:text-slate-500">
+                      <p>Admin: {approvalText(row.agreement.adminApproval?.status)}</p>
+                      <p>Super Admin: {approvalText(row.agreement.superAdminApproval?.status)}</p>
+                    </div>
+                  )}
+                </div>
+              ) : <Badge>No Agreement</Badge>,
+            },
             {
               key: '_id',
               header: 'Actions',
@@ -478,17 +499,40 @@ export const AssetManagement: React.FC = () => {
                   ) : (
                     <Button size="sm" variant="ghost" icon={<FileCheck className="w-3.5 h-3.5" />} onClick={() => generateMutation.mutate(row._id)}>Generate</Button>
                   )}
+                  {row.agreement?.signedPdfUrl && (
+                    <a
+                      href={row.agreement.signedPdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Signed
+                    </a>
+                  )}
                   {row.agreement?.status === 'Signed Uploaded' && (
                     <>
                       <Button
                         size="sm"
                         variant="ghost"
                         icon={<CheckCircle className="w-3.5 h-3.5" />}
-                        onClick={() => verifyMutation.mutate({ agreementId: row.agreement!._id, action: 'approve' })}
+                        disabled={(isSuperAdmin ? row.agreement.superAdminApproval : row.agreement.adminApproval)?.status === 'approved'}
+                        onClick={() => {
+                          if (window.confirm('Confirm you reviewed the signed agreement and approve it?')) {
+                            verifyMutation.mutate({ agreementId: row.agreement!._id, action: 'approve' });
+                          }
+                        }}
                       >
                         Approve
                       </Button>
-                      <Button size="sm" variant="ghost" icon={<Upload className="w-3.5 h-3.5" />} onClick={() => setRejectAgreement(row)}>Reject</Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<Upload className="w-3.5 h-3.5" />}
+                        disabled={(isSuperAdmin ? row.agreement.superAdminApproval : row.agreement.adminApproval)?.status === 'approved'}
+                        onClick={() => setRejectAgreement(row)}
+                      >
+                        Reject
+                      </Button>
                     </>
                   )}
                   {row.status === 'Assigned' && (

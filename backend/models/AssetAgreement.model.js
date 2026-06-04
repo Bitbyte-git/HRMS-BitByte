@@ -15,6 +15,31 @@ const fileSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const approvalSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    comments: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: '',
+    },
+  },
+  { _id: false },
+);
+
 const assetAgreementSchema = new mongoose.Schema(
   {
     agreementNumber: {
@@ -72,6 +97,14 @@ const assetAgreementSchema = new mongoose.Schema(
     signedFile: {
       type: fileSchema,
       default: null,
+    },
+    adminApproval: {
+      type: approvalSchema,
+      default: () => ({ status: 'pending' }),
+    },
+    superAdminApproval: {
+      type: approvalSchema,
+      default: () => ({ status: 'pending' }),
     },
     status: {
       type: String,

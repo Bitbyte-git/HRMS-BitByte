@@ -38,6 +38,13 @@ const mapFile = (file) => ({
   uploadedAt: new Date(),
 });
 
+const pendingApproval = () => ({
+  status: 'pending',
+  approvedBy: undefined,
+  approvedAt: null,
+  comments: '',
+});
+
 const uploadSignedFileToCloudinary = (file, user) => new Promise((resolve, reject) => {
   if (!file?.buffer) {
     return reject(new AppError('Signed agreement file is required.', 400));
@@ -511,6 +518,8 @@ class AssetService {
     agreement.uploadedDate = new Date();
     agreement.status = 'Signed Uploaded';
     agreement.rejectionReason = '';
+    agreement.adminApproval = pendingApproval();
+    agreement.superAdminApproval = pendingApproval();
     await agreement.save();
 
     await this.log(
@@ -534,31 +543,58 @@ class AssetService {
     const agreement = await AssetAgreement.findById(agreementId);
     if (!agreement) throw new AppError('Agreement not found', 404);
     if (agreement.status !== 'Signed Uploaded') {
-      throw new AppError('Only uploaded signed agreements can be verified.', 400);
+      throw new AppError('Only uploaded signed agreements awaiting approval can be verified.', 400);
     }
 
-    agreement.status = action === 'approve' ? 'Verified' : 'Rejected';
-    agreement.verifiedBy = user._id;
-    agreement.verifiedDate = new Date();
-    agreement.rejectionReason = action === 'reject' ? sanitize(comments) : '';
+    const approvalField = user.role === 'super_admin' ? 'superAdminApproval' : 'adminApproval';
+    const approvalLabel = user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+    const currentApproval = agreement[approvalField] || pendingApproval();
+
+    if (action === 'approve' && currentApproval.status === 'approved') {
+      throw new AppError(`${approvalLabel} approval is already recorded for this agreement.`, 400);
+    }
+
+    agreement[approvalField] = {
+      status: action === 'approve' ? 'approved' : 'rejected',
+      approvedBy: user._id,
+      approvedAt: new Date(),
+      comments: sanitize(comments),
+    };
+
+    if (action === 'reject') {
+      agreement.status = 'Rejected';
+      agreement.rejectionReason = sanitize(comments);
+    } else {
+      agreement.rejectionReason = '';
+      const adminApproved = (approvalField === 'adminApproval' ? agreement[approvalField] : agreement.adminApproval)?.status === 'approved';
+      const superAdminApproved = (approvalField === 'superAdminApproval' ? agreement[approvalField] : agreement.superAdminApproval)?.status === 'approved';
+
+      if (adminApproved && superAdminApproved) {
+        agreement.status = 'Verified';
+        agreement.verifiedBy = user._id;
+        agreement.verifiedDate = new Date();
+      }
+    }
     await agreement.save();
 
     await this.log(
       user,
-      action === 'approve' ? 'Agreement Verified' : 'Agreement Rejected',
+      action === 'approve' ? `${approvalLabel} Agreement Approval` : `${approvalLabel} Agreement Rejection`,
       { assetId: agreement.assetId, assignmentId: agreement.assignmentId, agreementId: agreement._id, employeeProfileId: agreement.employeeProfileId },
       { agreementNumber: agreement.agreementNumber, comments },
     );
 
-    notificationService.createNotification({
-      recipientId: agreement.userId,
-      type: action === 'approve' ? 'asset_agreement_approved' : 'asset_agreement_rejected',
-      subject: action === 'approve' ? 'Asset Agreement Approved' : 'Asset Agreement Rejected',
-      body: action === 'approve'
-        ? 'Your signed asset agreement has been verified.'
-        : `Your signed asset agreement was rejected.${comments ? ` Reason: ${comments}` : ''}`,
-      metadata: { agreementId: agreement._id },
-    }).catch((err) => logger.error(`Agreement verification notification failed: ${err.message}`));
+    if (agreement.status === 'Verified' || agreement.status === 'Rejected') {
+      notificationService.createNotification({
+        recipientId: agreement.userId,
+        type: agreement.status === 'Verified' ? 'asset_agreement_approved' : 'asset_agreement_rejected',
+        subject: agreement.status === 'Verified' ? 'Asset Agreement Approved' : 'Asset Agreement Rejected',
+        body: agreement.status === 'Verified'
+          ? 'Your signed asset agreement has been verified.'
+          : `Your signed asset agreement was rejected.${comments ? ` Reason: ${comments}` : ''}`,
+        metadata: { agreementId: agreement._id },
+      }).catch((err) => logger.error(`Agreement verification notification failed: ${err.message}`));
+    }
 
     return agreement;
   }
