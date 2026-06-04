@@ -71,7 +71,7 @@ export const EmployeeAssets: React.FC = () => {
       const agreement = uploadAssignment?.agreement;
       if (!agreement || !selectedFile) throw new Error('Select a signed agreement file.');
       const formData = new FormData();
-      formData.append('signedAgreement', selectedFile);
+      formData.append('signedAgreement', selectedFile, selectedFile.name);
       return assetApi.uploadSignedAgreement(agreement._id, formData);
     },
     onSuccess: () => {

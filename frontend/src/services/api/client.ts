@@ -12,11 +12,21 @@ const BASE_URL = RAW_BASE_URL.replace(/\/$/, "").endsWith("/api/v1")
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
-  headers: { "Content-Type": "application/json" },
+  headers: { Accept: "application/json" },
 });
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (config.data instanceof FormData) {
+      const headers = config.headers as any;
+      if (typeof headers.delete === "function") {
+        headers.delete("Content-Type");
+      } else {
+        delete headers["Content-Type"];
+        delete headers["content-type"];
+      }
+    }
+
     const token = localStorage.getItem("auth_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
