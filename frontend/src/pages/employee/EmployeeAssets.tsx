@@ -80,7 +80,10 @@ export const EmployeeAssets: React.FC = () => {
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ['employeeAssets'] });
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || error?.message || 'Upload failed'),
+    onError: (error: any) => {
+      if (!error?.response && error?.code === 'ECONNABORTED') return;
+      toast.error(error?.response?.data?.message || error?.message || 'Upload failed');
+    },
   });
 
   const assignments = assetQuery.data || [];

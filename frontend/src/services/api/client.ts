@@ -39,7 +39,14 @@ apiClient.interceptors.response.use(
   (error) => {
     const { response } = error;
     if (!response) {
-      toast.error("Network error. Please check your connection.");
+      const isUploadTimeout =
+        error.code === "ECONNABORTED" &&
+        String(error.config?.url || "").includes("/upload-signed");
+      toast.error(
+        isUploadTimeout
+          ? "Upload is taking too long. Please try again, or ask admin to check Cloudinary on the backend."
+          : "Network error. Please check your connection.",
+      );
       return Promise.reject(error);
     }
     const { status, data } = response;

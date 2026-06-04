@@ -311,7 +311,8 @@ export const assetApi = {
   uploadSignedAgreement: (agreementId: string, formData: FormData) =>
     apiClient.post<ApiResponse<{ agreement: AssetAgreementRecord }>>(
       `/assets/agreements/${agreementId}/upload-signed`,
-      formData
+      formData,
+      { timeout: 120000 }
     ),
 
   verifyAgreement: (agreementId: string, data: { action: 'approve' | 'reject'; comments?: string }) =>
