@@ -2,12 +2,11 @@ const express = require('express');
 const router = express.Router();
 const assetController = require('../controllers/asset.controller');
 const { protect, authorize, checkFirstLogin } = require('../middlewares/auth.middleware');
-const { ensureCloudinaryConfigured, createUpload } = require('../config/cloudinary');
+const { ensureCloudinaryConfigured, createMemoryUpload } = require('../config/cloudinary');
 const AppError = require('../utils/AppError');
 
-const signedAgreementUpload = createUpload({
+const signedAgreementUpload = createMemoryUpload({
   maxFileSize: 10 * 1024 * 1024,
-  folderBuilder: (req) => `employee-onboarding/${req.user.id}/asset-agreements`,
 });
 
 const handleSignedAgreementUpload = (req, res, next) => {

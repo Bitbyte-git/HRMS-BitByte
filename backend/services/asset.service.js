@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const notificationService = require('./notification.service');
 const AppError = require('../utils/AppError');
 const logger = require('../utils/logger');
+const { cloudinary } = require('../config/cloudinary');
 
 const COMPANY_DETAILS = {
   name: process.env.COMPANY_NAME || 'BitByte Tech',
@@ -35,6 +36,50 @@ const mapFile = (file) => ({
   mimeType: file.mimetype,
   sizeBytes: file.size,
   uploadedAt: new Date(),
+});
+
+const uploadSignedFileToCloudinary = (file, user) => new Promise((resolve, reject) => {
+  if (!file?.buffer) {
+    return reject(new AppError('Signed agreement file is required.', 400));
+  }
+
+  const folder = `employee-onboarding/${user.id || user._id}/asset-agreements`;
+  const startedAt = Date.now();
+  let uploadStream;
+
+  const timer = setTimeout(() => {
+    if (uploadStream?.destroy) uploadStream.destroy();
+    reject(new AppError('Cloudinary upload timed out while saving the signed agreement. Please try again.', 504));
+  }, 45000);
+
+  uploadStream = cloudinary.uploader.upload_stream(
+    {
+      folder,
+      allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
+      resource_type: 'auto',
+      public_id: `signedAgreement_${Date.now()}`,
+    },
+    (err, result) => {
+      clearTimeout(timer);
+
+      if (err) {
+        logger.error(`Signed agreement Cloudinary upload failed: ${err.message}`);
+        reject(new AppError(err.message || 'Signed agreement upload failed.', 502));
+        return;
+      }
+
+      logger.info(`Signed agreement uploaded to Cloudinary in ${Date.now() - startedAt}ms`);
+      resolve({
+        originalname: file.originalname,
+        filename: result.public_id,
+        path: result.secure_url || result.url,
+        mimetype: file.mimetype,
+        size: file.size || result.bytes,
+      });
+    },
+  );
+
+  uploadStream.end(file.buffer);
 });
 
 class AssetService {
@@ -459,8 +504,10 @@ class AssetService {
       throw new AppError(`Signed agreement cannot be uploaded while status is ${agreement.status}.`, 400);
     }
 
-    agreement.signedFile = mapFile(file);
-    agreement.signedPdfUrl = file.path;
+    const storedFile = file.path ? file : await uploadSignedFileToCloudinary(file, user);
+
+    agreement.signedFile = mapFile(storedFile);
+    agreement.signedPdfUrl = storedFile.path;
     agreement.uploadedDate = new Date();
     agreement.status = 'Signed Uploaded';
     agreement.rejectionReason = '';

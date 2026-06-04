@@ -78,6 +78,13 @@ const createUpload = ({
   });
 };
 
+const createMemoryUpload = ({ maxFileSize = MAX_FILE_SIZE } = {}) =>
+  multer({
+    storage: multer.memoryStorage(),
+    fileFilter,
+    limits: { fileSize: maxFileSize },
+  });
+
 const fileFilter = (req, file, cb) => {
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return cb(
@@ -90,4 +97,4 @@ const fileFilter = (req, file, cb) => {
 
 const upload = createUpload();
 
-module.exports = { cloudinary, ensureCloudinaryConfigured, upload, createUpload };
+module.exports = { cloudinary, ensureCloudinaryConfigured, upload, createUpload, createMemoryUpload };
