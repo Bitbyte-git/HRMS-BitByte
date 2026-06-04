@@ -103,11 +103,9 @@ export const AssetAgreementView: React.FC<AssetAgreementViewProps> = ({ payload,
 
         <div className="payslip-net mt-5 grid sm:grid-cols-2 border border-slate-200 rounded-xl overflow-hidden">
           <div className="px-5 py-8">
-            <p className="text-xs text-slate-500">Employee Signature</p>
             <p className="text-sm font-semibold text-slate-800 mt-10">{payload.signatures.employee}</p>
           </div>
           <div className="px-5 py-8 bg-slate-50">
-            <p className="text-xs text-slate-500">Authorized Company Signature</p>
             <p className="text-sm font-semibold text-slate-800 mt-10">{payload.signatures.company}</p>
           </div>
         </div>
