@@ -62,7 +62,12 @@ exports.getAgreement = catchAsync(async (req, res) => {
 });
 
 exports.uploadSignedAgreement = catchAsync(async (req, res) => {
-  const agreement = await assetService.uploadSignedAgreement(req.params.agreementId, req.file, req.user);
+  const signedAgreementFile =
+    req.file ||
+    req.files?.signedAgreement?.[0] ||
+    req.files?.file?.[0] ||
+    req.files?.document?.[0];
+  const agreement = await assetService.uploadSignedAgreement(req.params.agreementId, signedAgreementFile, req.user);
   res.status(200).json({ status: 'success', message: 'Signed agreement uploaded successfully.', data: { agreement } });
 });
 

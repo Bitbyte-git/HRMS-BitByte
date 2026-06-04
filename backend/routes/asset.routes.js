@@ -11,8 +11,19 @@ const signedAgreementUpload = createUpload({
 });
 
 const handleSignedAgreementUpload = (req, res, next) => {
-  signedAgreementUpload.single('signedAgreement')(req, res, (err) => {
-    if (!err) return next();
+  signedAgreementUpload.fields([
+    { name: 'signedAgreement', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+    { name: 'document', maxCount: 1 },
+  ])(req, res, (err) => {
+    if (!err) {
+      req.file =
+        req.files?.signedAgreement?.[0] ||
+        req.files?.file?.[0] ||
+        req.files?.document?.[0] ||
+        null;
+      return next();
+    }
 
     const message = err.message?.includes('File too large')
       ? 'Signed agreement file must be 10 MB or smaller.'
