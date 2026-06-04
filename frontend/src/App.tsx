@@ -38,6 +38,7 @@ import { EmployeeList } from "./pages/admin/EmployeeList";
 import { LeaveManagement } from "./pages/admin/LeaveManagement";
 import { PayrollManagement } from "./pages/admin/PayrollManagement";
 import { VerificationPanel } from "./pages/admin/VerificationPanel";
+import { AssetManagement } from "./pages/admin/AssetManagement";
 
 // Super Admin Pages
 import { AdminManagement } from "./pages/superadmin/AdminManagement";
@@ -47,6 +48,7 @@ import { EmployeeReview } from "./pages/superadmin/EmployeeReview";
 import { PendingApprovals } from "./pages/superadmin/PendingApprovals";
 import { PayrollReports } from "./pages/superadmin/PayrollReports";
 import { SuperAdminDashboard } from "./pages/superadmin/SuperAdminDashboard";
+import { EmployeeAssets } from "./pages/employee/EmployeeAssets";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +97,7 @@ export default function App() {
               <Route path="/employee/onboarding" element={<OnboardingForm />} />
               <Route path="/employee/leaves" element={<EmployeeLeaves />} />
               <Route path="/employee/payroll" element={<EmployeePayroll />} />
+              <Route path="/employee/assets" element={<EmployeeAssets />} />
               <Route path="/employee/profile" element={<EmployeeProfile />} />
             </Route>
           </Route>
@@ -107,6 +110,7 @@ export default function App() {
               <Route path="/admin/attendance" element={<AdminAttendance />} />
               <Route path="/admin/leaves" element={<LeaveManagement />} />
               <Route path="/admin/payroll" element={<PayrollManagement />} />
+              <Route path="/admin/assets" element={<AssetManagement />} />
               <Route path="/admin/departments" element={<DepartmentManagement />} />
               <Route
                 path="/admin/employees/:profileId"
@@ -135,6 +139,7 @@ export default function App() {
               <Route path="/super-admin/admins" element={<AdminManagement />} />
               <Route path="/super-admin/attendance" element={<AdminAttendance />} />
               <Route path="/super-admin/payroll" element={<PayrollReports />} />
+              <Route path="/super-admin/assets" element={<AssetManagement />} />
               <Route path="/super-admin/analytics" element={<Analytics />} />
             </Route>
           </Route>

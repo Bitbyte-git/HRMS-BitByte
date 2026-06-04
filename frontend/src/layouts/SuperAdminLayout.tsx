@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardCheck, Users, UserCog, BarChart3, CalendarCheck, Wallet } from 'lucide-react';
+import { LayoutDashboard, ClipboardCheck, Users, UserCog, BarChart3, CalendarCheck, Package, Wallet } from 'lucide-react';
 import { Sidebar, MobileMenuButton } from '../components/layout/Sidebar';
 import { useAuthStore } from '../context/authStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/super-admin/admins',     icon: <UserCog         className="w-4 h-4" />, label: 'Admin Management'  },
   { to: '/super-admin/attendance', icon: <CalendarCheck   className="w-4 h-4" />, label: 'Attendance'        },
   { to: '/super-admin/payroll',    icon: <Wallet          className="w-4 h-4" />, label: 'Payroll Reports'   },
+  { to: '/super-admin/assets',     icon: <Package         className="w-4 h-4" />, label: 'Assets'            },
   { to: '/super-admin/analytics',  icon: <BarChart3       className="w-4 h-4" />, label: 'Analytics'         },
 ];
 
@@ -23,6 +24,7 @@ const pageTitles: Record<string, string> = {
   '/super-admin/admins':    'Admin Management',
   '/super-admin/attendance': 'Attendance',
   '/super-admin/payroll': 'Payroll Reports',
+  '/super-admin/assets': 'Asset Management',
   '/super-admin/analytics': 'Analytics',
 };
 

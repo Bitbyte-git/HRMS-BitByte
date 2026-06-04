@@ -145,6 +145,131 @@ export interface DocumentRecord {
   isMandatoryComplete: boolean;
 }
 
+// ── Asset Management ─────────────────────────────────────────────────────
+export type AssetStatus = 'Available' | 'Assigned' | 'Returned' | 'Damaged' | 'Lost';
+export type AssetAssignmentStatus = 'Assigned' | 'Returned' | 'Lost' | 'Damaged';
+export type AssetAgreementStatus = 'Pending Signature' | 'Signed Uploaded' | 'Verified' | 'Rejected';
+
+export interface AssetRecord {
+  _id: string;
+  assetId: string;
+  productName: string;
+  category: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  imeiNumber?: string;
+  specification?: string;
+  status: AssetStatus;
+  assignedEmployeeProfileId?: string | null;
+  assignedUserId?: string | null;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  createdBy?: string | User;
+  updatedBy?: string | User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetEmployeeOption {
+  profileId: string;
+  userId: string;
+  employeeId: string;
+  employeeName: string;
+  department?: string;
+  designation?: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface AssetAgreementRecord {
+  _id: string;
+  agreementNumber: string;
+  assignmentId: string;
+  employeeProfileId: string;
+  userId: string;
+  employeeId: string;
+  assetId: string;
+  assetCode: string;
+  agreementPdfUrl?: string;
+  signedPdfUrl?: string;
+  signedFile?: DocumentFile;
+  status: AssetAgreementStatus;
+  agreementPayload?: AssetAgreementPayload;
+  generatedDate: string;
+  uploadedDate?: string;
+  verifiedDate?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetAssignmentRecord {
+  _id: string;
+  assignmentId: string;
+  employeeProfileId: string;
+  userId: string;
+  employeeId: string;
+  employeeName: string;
+  department?: string;
+  designation?: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  assetId: string;
+  assetCode: string;
+  productName: string;
+  category?: string;
+  serialNumber?: string;
+  imeiNumber?: string;
+  specification?: string;
+  assignedBy?: string | User;
+  assignedDate: string;
+  returnDate?: string;
+  returnCondition?: 'Good' | 'Damaged' | 'Lost' | '';
+  returnNotes?: string;
+  status: AssetAssignmentStatus;
+  agreement?: AssetAgreementRecord | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetAgreementPayload {
+  company: PayrollCompanyDetails;
+  agreement: {
+    agreementNumber: string;
+    agreementDate: string;
+    status: AssetAgreementStatus;
+  };
+  employee: {
+    employeeId: string;
+    employeeName: string;
+    department?: string;
+    designation?: string;
+    position?: string;
+    email?: string;
+    phone?: string;
+  };
+  asset: {
+    assetId: string;
+    productName: string;
+    category?: string;
+    serialNumber?: string;
+    imeiNumber?: string;
+    specification?: string;
+  };
+  assignment: {
+    assignmentId: string;
+    assignedDate: string;
+  };
+  terms: string[];
+  signatures: {
+    employee: string;
+    company: string;
+  };
+}
+
 export interface VerificationStatus {
   personal:  SectionVerification;
   education: SectionVerification;

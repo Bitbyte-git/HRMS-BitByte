@@ -57,15 +57,26 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => ({
-    folder: `employee-onboarding/${req.user.id}/documents`,
-    allowed_formats: ["jpg", "jpeg", "png", "pdf"],
-    resource_type: "auto",
-    public_id: `${file.fieldname}_${Date.now()}`,
-  }),
-});
+const createUpload = ({
+  maxFileSize = MAX_FILE_SIZE,
+  folderBuilder = (req) => `employee-onboarding/${req.user.id}/documents`,
+} = {}) => {
+  const storage = new CloudinaryStorage({
+    cloudinary,
+    params: async (req, file) => ({
+      folder: folderBuilder(req, file),
+      allowed_formats: ["jpg", "jpeg", "png", "pdf"],
+      resource_type: "auto",
+      public_id: `${file.fieldname}_${Date.now()}`,
+    }),
+  });
+
+  return multer({
+    storage,
+    fileFilter,
+    limits: { fileSize: maxFileSize },
+  });
+};
 
 const fileFilter = (req, file, cb) => {
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
@@ -77,10 +88,6 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE },
-});
+const upload = createUpload();
 
-module.exports = { cloudinary, ensureCloudinaryConfigured, upload };
+module.exports = { cloudinary, ensureCloudinaryConfigured, upload, createUpload };

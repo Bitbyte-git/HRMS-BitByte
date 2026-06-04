@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Building2, CalendarCheck, CalendarRange, LayoutDashboard, Users, UserCircle, Wallet } from 'lucide-react';
+import { Building2, CalendarCheck, CalendarRange, LayoutDashboard, Package, Users, UserCircle, Wallet } from 'lucide-react';
 import { Sidebar, MobileMenuButton } from '../components/layout/Sidebar';
 import { useAuthStore } from '../context/authStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/admin/attendance', icon: <CalendarCheck className="w-4 h-4" />, label: 'Attendance' },
   { to: '/admin/leaves', icon: <CalendarRange className="w-4 h-4" />, label: 'Leaves' },
   { to: '/admin/payroll', icon: <Wallet className="w-4 h-4" />, label: 'Payroll' },
+  { to: '/admin/assets', icon: <Package className="w-4 h-4" />, label: 'Assets' },
   { to: '/admin/departments', icon: <Building2 className="w-4 h-4" />, label: 'Departments' },
   { to: '/admin/profile',   icon: <UserCircle     className="w-4 h-4" />, label: 'My Profile' },
 ];
@@ -22,6 +23,7 @@ const pageTitles: Record<string, string> = {
   '/admin/attendance': 'Attendance',
   '/admin/leaves': 'Leave Management',
   '/admin/payroll': 'Payroll Management',
+  '/admin/assets': 'Asset Management',
   '/admin/departments': 'Department Management',
   '/admin/profile':   'My Profile',
 };

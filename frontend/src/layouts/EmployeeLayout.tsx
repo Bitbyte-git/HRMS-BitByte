@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, User, CalendarRange, Wallet } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, User, CalendarRange, Package, Wallet } from 'lucide-react';
 import { Sidebar, MobileMenuButton } from '../components/layout/Sidebar';
 import { useAuthStore } from '../context/authStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/employee/onboarding', icon: <ClipboardList   className="w-4 h-4" />, label: 'Onboarding Form'},
   { to: '/employee/leaves',     icon: <CalendarRange   className="w-4 h-4" />, label: 'My Leaves'      },
   { to: '/employee/payroll',    icon: <Wallet          className="w-4 h-4" />, label: 'Payroll'        },
+  { to: '/employee/assets',     icon: <Package         className="w-4 h-4" />, label: 'My Assets'      },
   { to: '/employee/profile',    icon: <User            className="w-4 h-4" />, label: 'My Profile'     },
 ];
 
@@ -20,6 +21,7 @@ const pageTitles: Record<string, string> = {
   '/employee/onboarding': 'Onboarding Form',
   '/employee/leaves':     'My Leaves',
   '/employee/payroll':    'Payroll',
+  '/employee/assets':     'My Assets',
   '/employee/profile':    'My Profile',
 };
 

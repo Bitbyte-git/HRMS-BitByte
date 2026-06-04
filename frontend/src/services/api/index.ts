@@ -6,6 +6,7 @@ import type {
   GoogleAttendanceResponse,
   EmployeeLeaveRow, LeavePolicy, LeaveRequestRow, LeaveType,
   PayrollAnalytics, PayrollEmployeeOption, PayrollRecord, PayslipPayload, SalaryComponent,
+  AssetAgreementPayload, AssetAgreementRecord, AssetAssignmentRecord, AssetEmployeeOption, AssetRecord, AssetStatus,
 } from '../../types';
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -245,6 +246,90 @@ export const payrollApi = {
 
   remove: (id: string) =>
     apiClient.delete<ApiResponse>(`/payroll/${id}`),
+};
+
+// ── Assets ───────────────────────────────────────────────────────────────
+export const assetApi = {
+  getAssets: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+    status?: AssetStatus | '';
+    assigned?: 'true' | 'false' | '';
+  }) =>
+    apiClient.get<ApiResponse<{
+      assets: AssetRecord[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>>('/assets', { params }),
+
+  createAsset: (data: Partial<AssetRecord>) =>
+    apiClient.post<ApiResponse<{ asset: AssetRecord }>>('/assets', data),
+
+  updateAsset: (id: string, data: Partial<AssetRecord>) =>
+    apiClient.patch<ApiResponse<{ asset: AssetRecord }>>(`/assets/${id}`, data),
+
+  deleteAsset: (id: string) =>
+    apiClient.delete<ApiResponse>(`/assets/${id}`),
+
+  getAvailableAssets: () =>
+    apiClient.get<ApiResponse<{ assets: AssetRecord[] }>>('/assets/available'),
+
+  searchEmployees: (params?: { search?: string; limit?: number }) =>
+    apiClient.get<ApiResponse<{ employees: AssetEmployeeOption[] }>>('/assets/employees/search', { params }),
+
+  getEmployee: (employeeId: string) =>
+    apiClient.get<ApiResponse<{ employee: AssetEmployeeOption }>>(`/assets/employees/${employeeId}`),
+
+  assignAsset: (data: { employeeId: string; assetId: string }) =>
+    apiClient.post<ApiResponse<{
+      assignment: AssetAssignmentRecord;
+      asset: AssetRecord;
+      agreement: AssetAgreementRecord;
+    }>>('/assets/assign', data),
+
+  getAssignments: (params?: { page?: number; limit?: number; search?: string; status?: string }) =>
+    apiClient.get<ApiResponse<{
+      assignments: AssetAssignmentRecord[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>>('/assets/assignments', { params }),
+
+  getMine: () =>
+    apiClient.get<ApiResponse<{
+      assignments: AssetAssignmentRecord[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>>('/assets/mine'),
+
+  generateAgreement: (assignmentId: string) =>
+    apiClient.post<ApiResponse<{ agreement: AssetAgreementRecord }>>(`/assets/assignments/${assignmentId}/agreement`, {}),
+
+  getAgreement: (agreementId: string) =>
+    apiClient.get<ApiResponse<{ agreement: AssetAgreementRecord; payload: AssetAgreementPayload }>>(
+      `/assets/agreements/${agreementId}`
+    ),
+
+  uploadSignedAgreement: (agreementId: string, formData: FormData) =>
+    apiClient.post<ApiResponse<{ agreement: AssetAgreementRecord }>>(
+      `/assets/agreements/${agreementId}/upload-signed`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    ),
+
+  verifyAgreement: (agreementId: string, data: { action: 'approve' | 'reject'; comments?: string }) =>
+    apiClient.patch<ApiResponse<{ agreement: AssetAgreementRecord }>>(
+      `/assets/agreements/${agreementId}/verify`,
+      data
+    ),
+
+  returnAsset: (assignmentId: string, data: {
+    returnDate?: string;
+    assetCondition: 'Good' | 'Damaged' | 'Lost';
+    returnNotes?: string;
+  }) =>
+    apiClient.patch<ApiResponse<{ assignment: AssetAssignmentRecord; asset: AssetRecord }>>(
+      `/assets/assignments/${assignmentId}/return`,
+      data
+    ),
 };
 
 // ── Super Admin ───────────────────────────────────────────────────────────
