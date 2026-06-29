@@ -50,9 +50,10 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
     const { status, data } = response;
+    const skipAuthRedirect = Boolean((error.config as any)?.skipAuthRedirect);
     switch (status) {
       case 401:
-        if (data?.code !== "FIRST_LOGIN_RESET_REQUIRED") {
+        if (data?.code !== "FIRST_LOGIN_RESET_REQUIRED" && !skipAuthRedirect) {
           localStorage.removeItem("auth_token");
           localStorage.removeItem("auth_user");
           window.location.href = "/login";

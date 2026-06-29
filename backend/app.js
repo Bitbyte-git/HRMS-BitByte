@@ -25,6 +25,7 @@ const attendanceRoutes = require("./routes/attendance.routes");
 const leaveRoutes = require("./routes/leave.routes");
 const payrollRoutes = require("./routes/payroll.routes");
 const assetRoutes = require("./routes/asset.routes");
+const chatbotRoutes = require("./routes/chatbot.routes");
 
 const app = express();
 
@@ -156,6 +157,7 @@ app.use("/api/v1/attendance", attendanceRoutes);
 app.use("/api/v1/leaves", leaveRoutes);
 app.use("/api/v1/payroll", payrollRoutes);
 app.use("/api/v1/assets", assetRoutes);
+app.use("/api/v1/chatbot", chatbotRoutes);
 
 // ── 404 handler ────────────────────────────────────────────────────────────
 app.all("*", (req, res, next) => {

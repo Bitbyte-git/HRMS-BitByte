@@ -5,6 +5,7 @@ import { Sidebar, MobileMenuButton } from '../components/layout/Sidebar';
 import { useAuthStore } from '../context/authStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 import { NotificationBell } from '../components/common/NotificationBell';
+import { AIChatBotWidget } from '../components/common/AIChatBotWidget';
 
 const navItems = [
   { to: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard' },
@@ -67,6 +68,7 @@ export const AdminLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <AIChatBotWidget />
     </div>
   );
 };
