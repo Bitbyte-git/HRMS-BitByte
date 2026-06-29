@@ -38,19 +38,23 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const { response } = error;
+    const skipAuthRedirect = Boolean((error.config as any)?.skipAuthRedirect);
+    const skipGlobalErrorToast = Boolean((error.config as any)?.skipGlobalErrorToast || skipAuthRedirect);
+
     if (!response) {
       const isUploadTimeout =
         error.code === "ECONNABORTED" &&
         String(error.config?.url || "").includes("/upload-signed");
-      toast.error(
-        isUploadTimeout
-          ? "Upload is taking too long. Please try again, or ask admin to check Cloudinary on the backend."
-          : "Network error. Please check your connection.",
-      );
+      if (!skipGlobalErrorToast) {
+        toast.error(
+          isUploadTimeout
+            ? "Upload is taking too long. Please try again, or ask admin to check Cloudinary on the backend."
+            : "Network error. Please check your connection.",
+        );
+      }
       return Promise.reject(error);
     }
     const { status, data } = response;
-    const skipAuthRedirect = Boolean((error.config as any)?.skipAuthRedirect);
     switch (status) {
       case 401:
         if (data?.code !== "FIRST_LOGIN_RESET_REQUIRED" && !skipAuthRedirect) {
@@ -60,14 +64,16 @@ apiClient.interceptors.response.use(
         }
         break;
       case 403:
-        if (data?.code !== "FIRST_LOGIN_RESET_REQUIRED")
+        if (data?.code !== "FIRST_LOGIN_RESET_REQUIRED" && !skipGlobalErrorToast)
           toast.error("Access denied.");
         break;
       case 429:
-        toast.error("Too many requests. Please wait and try again.");
+        if (!skipGlobalErrorToast)
+          toast.error("Too many requests. Please wait and try again.");
         break;
       case 500:
-        toast.error("Server error. Please try again later.");
+        if (!skipGlobalErrorToast)
+          toast.error("Server error. Please try again later.");
         break;
     }
     return Promise.reject(error);

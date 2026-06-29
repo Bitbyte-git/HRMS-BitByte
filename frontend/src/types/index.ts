@@ -24,15 +24,6 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
-// ── AI Chatbot ────────────────────────────────────────────────────────────
-export interface ChatbotQuestion {
-  id: string;
-  text: string;
-  answer: string;
-  moduleLabel: string;
-  actionPath: string;
-}
-
 // ── Verification ──────────────────────────────────────────────────────────
 export type SectionStatus =
   | 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected';

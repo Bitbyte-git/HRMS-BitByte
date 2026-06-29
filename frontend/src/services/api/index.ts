@@ -7,7 +7,6 @@ import type {
   EmployeeLeaveRow, LeavePolicy, LeaveRequestRow, LeaveType,
   PayrollAnalytics, PayrollEmployeeOption, PayrollRecord, PayslipPayload, SalaryComponent,
   AssetAgreementPayload, AssetAgreementRecord, AssetAssignmentRecord, AssetEmployeeOption, AssetRecord, AssetStatus,
-  ChatbotQuestion,
 } from '../../types';
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -389,9 +388,10 @@ export const notificationApi = {
 
 // ── AI Chatbot ───────────────────────────────────────────────────────────
 export const chatbotApi = {
-  getQuestions: () =>
-    apiClient.get<ApiResponse<{ questions: ChatbotQuestion[] }>>(
-      '/chatbot/questions',
-      { skipAuthRedirect: true } as any,
+  sendMessage: (message: string) =>
+    apiClient.post<ApiResponse & { response: string }>(
+      '/chat',
+      { message },
+      { skipAuthRedirect: true, skipGlobalErrorToast: true } as any,
     ),
 };

@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get('/questions', chatbotController.getQuestions);
+router.post('/', chatbotController.sendMessage);
 
 module.exports = router;

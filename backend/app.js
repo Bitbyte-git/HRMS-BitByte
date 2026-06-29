@@ -158,6 +158,8 @@ app.use("/api/v1/leaves", leaveRoutes);
 app.use("/api/v1/payroll", payrollRoutes);
 app.use("/api/v1/assets", assetRoutes);
 app.use("/api/v1/chatbot", chatbotRoutes);
+app.use("/api/v1/chat", chatbotRoutes);
+app.use("/api/chat", chatbotRoutes);
 
 // ── 404 handler ────────────────────────────────────────────────────────────
 app.all("*", (req, res, next) => {
