@@ -79,21 +79,26 @@ const questions = [
 ];
 
 const seedChatbotQuestions = async () => {
+  await Promise.all(
+    questions.map((question) =>
+      ChatbotQuestion.findOneAndUpdate(
+        { text: question.text },
+        { $set: question },
+        { upsert: true, new: true, runValidators: true },
+      ),
+    ),
+  );
+
+  logger.info(`Chatbot questions ready: ${questions.length} configured`);
+};
+
+const runStandaloneSeed = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     logger.info('Connected to MongoDB for chatbot question seeding');
 
-    await Promise.all(
-      questions.map((question) =>
-        ChatbotQuestion.findOneAndUpdate(
-          { text: question.text },
-          { $set: question },
-          { upsert: true, new: true, runValidators: true },
-        ),
-      ),
-    );
-
-    logger.info(`Seeded ${questions.length} chatbot questions`);
+    await seedChatbotQuestions();
+    await mongoose.connection.close();
     process.exit(0);
   } catch (err) {
     logger.error(`Chatbot question seed failed: ${err.message}`);
@@ -101,4 +106,11 @@ const seedChatbotQuestions = async () => {
   }
 };
 
-seedChatbotQuestions();
+if (require.main === module) {
+  runStandaloneSeed();
+}
+
+module.exports = {
+  CHATBOT_QUESTIONS: questions,
+  seedChatbotQuestions,
+};

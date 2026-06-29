@@ -2,6 +2,7 @@ require("dotenv").config();
 const app = require("./app");
 const connectDB = require("./config/db");
 const logger = require("./utils/logger");
+const { seedChatbotQuestions } = require("./utils/seedChatbotQuestions");
 
 const PORT = process.env.PORT || 5000;
 let server;
@@ -30,6 +31,14 @@ app.get("/", (req, res) => {
 // ── Start server ──────────────────────────────────────────────────────────
 const startServer = async () => {
   await connectDB();
+
+  if (process.env.AUTO_SEED_CHATBOT !== "false") {
+    try {
+      await seedChatbotQuestions();
+    } catch (err) {
+      logger.error(`Chatbot auto-seed failed: ${err.message}`);
+    }
+  }
 
   server = app.listen(PORT, () => {
     logger.info(
