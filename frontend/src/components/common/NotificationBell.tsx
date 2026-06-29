@@ -14,7 +14,6 @@ export const NotificationBell: React.FC = () => {
     queryKey: ['notifications', user?._id],
     queryFn: () => apiClient.get('/notifications').then(res => res.data.data.notifications),
     enabled: !!user?._id,
-    refetchInterval: 15000,
   });
 
   const markAsRead = useMutation({

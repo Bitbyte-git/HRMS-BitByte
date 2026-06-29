@@ -37,7 +37,6 @@ export const SuperAdminDashboard: React.FC = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['superAdminDashboard'],
     queryFn:  () => superAdminApi.getDashboardStats().then(r => r.data.data),
-    refetchInterval: 60000,
   });
 
   const { data: pendingData } = useQuery({

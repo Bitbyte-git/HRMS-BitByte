@@ -37,7 +37,6 @@ export const AdminDashboard: React.FC = () => {
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['adminDashboard'],
     queryFn:  () => adminApi.getDashboardStats().then(r => r.data.data),
-    refetchInterval: 60000,
   });
 
   const { data: empData } = useQuery({
